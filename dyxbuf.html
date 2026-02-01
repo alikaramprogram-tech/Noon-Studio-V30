@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Noon Studio V30 - Professional Edition</title>
+    <style>
+        :root { --bg: #ffffff; --border: #d0d7de; --accent: #2ea44f; --danger: #cf222e; --blue: #0969da; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+        body { background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .tabs { display: flex; background: #f6f8fa; border-bottom: 1px solid var(--border); min-height: 55px; }
+        .tab { padding: 5px; cursor: pointer; flex: 1; text-align: center; font-size: 11px; border-left: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .tab.active { background: #fff; font-weight: bold; border-bottom: 3px solid #2188ff; }
+
+        .pane { display: none; flex: 1; flex-direction: column; padding: 10px; overflow: hidden; }
+        .pane.active { display: flex; }
+
+        /* تاب الملفات: الحارس والحذف */
+        .header-tools { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f6f8fa; border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border); }
+        .file-item { border: 1px solid var(--border); padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        
+        /* تاب صناعة اللغة: التحكم بالمساحة */
+        .factory-layout { display: flex; flex-direction: column; height: 100%; gap: 8px; }
+        .factory-nav { display: flex; gap: 5px; align-items: center; background: #f1f8ff; padding: 8px; border-radius: 8px; border: 1px solid #c8e1ff; flex-wrap: wrap; }
+        .editor-grid { display: flex; gap: 8px; flex: 1; min-height: 0; transition: 0.3s; }
+        .box { flex: 1; display: flex; flex-direction: column; }
+        .box label { font-size: 11px; font-weight: bold; margin-bottom: 3px; display: flex; justify-content: space-between; }
+        .area-input { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 14px; outline: none; resize: none; background: #fff; }
+        
+        /* الكونسول الذكي */
+        .console-container { display: flex; flex-direction: column; transition: 0.3s; }
+        .console-header { display: flex; justify-content: space-between; align-items: center; background: #333; color: #fff; padding: 4px 10px; border-radius: 6px 6px 0 0; font-size: 11px; }
+        .factory-out { height: 120px; background: #1a1a1a; color: #00ff41; padding: 10px; border-radius: 0 0 6px 6px; font-family: monospace; font-size: 12px; overflow-y: auto; border: 2px solid #333; direction: ltr; }
+
+        .btn-toggle { background: #eee; border: 1px solid #ccc; padding: 2px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+        .btn-build { background: #6f42c1; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="tabs">
+    <div class="tab" onclick="sw(0)">📂<br>الملفات</div>
+    <div class="tab active" onclick="sw(1)">💻<br>المحرر</div>
+    <div class="tab" onclick="sw(2)">📊<br>الأداء</div>
+    <div class="tab" onclick="sw(3)">🛠️<br>صناعة لغة</div>
+</div>
+
+<div class="pane">
+    <div class="header-tools">
+        <label style="font-size:11px;"><input type="checkbox" id="guard" checked> حارس الأمن (.nn)</label>
+        <button onclick="addFile()" style="background:var(--accent); color:white; border:none; padding:6px 10px; border-radius:5px;">+ ملف جديد</button>
+    </div>
+    <div id="flist" style="overflow-y:auto;"></div>
+</div>
+
+<div class="pane active">
+    <textarea id="editor" class="area-input" style="flex:1;" oninput="save()"></textarea>
+    <div id="console" style="height:80px; background:#f6f8fa; border:1px solid #ddd; padding:10px; margin-top:5px; font-size:12px; overflow-y:auto; direction:ltr;"></div>
+    <button onclick="runNoon()" style="background:var(--accent); color:white; border:none; padding:10px; margin-top:5px; border-radius:6px; font-weight:bold;">تشغيل 🚀</button>
+</div>
+
+<div class="pane" style="text-align:center; padding-top:40px;">
+    <h1 id="perf-display" style="color:var(--blue); font-size:28px;">0.000000 ms</h1>
+</div>
+
+<div class="pane">
+    <div class="factory-layout">
+        <div class="factory-nav">
+            <input type="text" id="lang-name" value="Boon" oninput="syncUI()" style="width:70px; padding:3px;">
+            <button class="btn-toggle" id="btn-toggle-inter" onclick="toggleElement('inter-side')">👁️ المفسر</button>
+            <button class="btn-toggle" id="btn-toggle-out" onclick="toggleElement('con-side')">👁️ الكونسول</button>
+            <button class="btn-build" onclick="runFactory()">بناء وتشغيل 🚀</button>
+        </div>
+
+        <div class="editor-grid">
+            <div class="box" id="inter-side">
+                <label>📝 المفسر (نون)</label>
+                <textarea id="inter-text" class="area-input" placeholder="اكتب مفسرك هنا..."></textarea>
+            </div>
+            <div class="box">
+                <label id="lang-label">🧪 تجربة (Boon)</label>
+                <textarea id="lang-text" class="area-input" placeholder="اكتب كود لغتك هنا..."></textarea>
+            </div>
+        </div>
+
+        <div class="console-container" id="con-side">
+            <div class="console-header">
+                <span>المخرجات</span>
+                <button onclick="document.getElementById('factory-out').innerText=''" style="background:none; border:none; color:white; font-size:14px;">×</button>
+            </div>
+            <div id="factory-out" class="factory-out"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('noon_pro_v30')) || { "main.nn": "func main() {\n  Out.printfn(\"Ready!\")\n}" };
+    let cur = "main.nn";
+
+    function sw(i) {
+        document.querySelectorAll('.pane').forEach((p, idx) => p.classList.toggle('active', i === idx));
+        document.querySelectorAll('.tab').forEach((t, idx) => t.classList.toggle('active', i === idx));
+    }
+
+    // تبديل ظهور العناصر (إخفاء/إظهار) لتوفير مساحة
+    function toggleElement(id) {
+        let el = document.getElementById(id);
+        el.classList.toggle('hidden');
+    }
+
+    function addFile() {
+        let n = prompt("اسم الملف:");
+        if(!n) return;
+        if(document.getElementById('guard').checked && !n.endsWith('.nn')) return alert("الحارس: يجب أن ينتهي بـ .nn");
+        db[n] = "func main() {}"; render(); save();
+    }
+
+    function render() {
+        let l = document.getElementById('flist'); l.innerHTML = '';
+        Object.keys(db).forEach(n => {
+            l.innerHTML += `<div class="file-item"><span>⚡ ${n}</span><div>
+                <button onclick="delFile('${n}')" style="color:red; background:none; border:none; margin-right:10px;">حذف</button>
+                <button onclick="openF('${n}')" style="background:#0969da; color:white; border:none; padding:4px 10px; border-radius:4px;">فتح</button>
+            </div></div>`;
+        });
+    }
+
+    function delFile(n) { if(confirm("حذف؟")) { delete db[n]; if(cur==n)cur=Object.keys(db)[0]||""; render(); save(); } }
+    function openF(n) { cur = n; document.getElementById('editor').value = db[n]; sw(1); }
+    function save() { if(cur) db[cur] = document.getElementById('editor').value; localStorage.setItem('noon_pro_v30', JSON.stringify(db)); }
+    function syncUI() { 
+        let v = document.getElementById('lang-name').value || "Boon";
+        document.getElementById('lang-label').innerText = `🧪 تجربة (${v})`;
+    }
+
+    function runNoon() {
+        let con = document.getElementById('console');
+        let code = document.getElementById('editor').value;
+        let start = performance.now(); con.innerText = "";
+        try {
+            let clean = code.replace(/func\s+(\w+)\s*\((.*?)\)/g, "function $1($2)").replace(/Out\.printfn\((.*?)\)/g, "p($1);");
+            const p = (t) => { con.innerText += t + "\n"; };
+            new Function('p', clean + "\n if(typeof main === 'function') main();")(p);
+            document.getElementById('perf-display').innerText = (performance.now() - start).toFixed(6) + " ms";
+        } catch(e) { con.innerText = "Error"; }
+    }
+
+    function runFactory() {
+        let out = document.getElementById('factory-out');
+        let code = document.getElementById('lang-text').value;
+        out.innerText += "> Executing...\n";
+        code.split('\n').forEach(line => {
+            if(line.includes('print')) out.innerText += line.match(/\((.*)\)/)[1].replace(/['"]/g, '') + "\n";
+        });
+    }
+
+    render(); openF(cur);
+</script>
+</body>
+</html>
